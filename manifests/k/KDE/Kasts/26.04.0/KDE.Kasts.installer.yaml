@@ -9,14 +9,14 @@ ProductCode: Kasts
 Installers:
 - Architecture: x64
   Scope: user
-  InstallerUrl: https://cdn.kde.org/ci-builds/multimedia/kasts/release-26.04/windows/kasts-release_26.04-4430-windows-cl-msvc2022-x86_64.exe
-  InstallerSha256: 7DF35D277885723C1D35DB31F39CC7F6314CF82332E1A432C127769D58D9DE1A
+  InstallerUrl: https://cdn.kde.org/ci-builds/multimedia/kasts/release-26.04/windows/kasts-release_26.04-4480-windows-cl-msvc2022-x86_64.exe
+  InstallerSha256: DE0EDFB119A04F3BFFA4ACB24AA72F10D8FBD308DA35EBE3C0BDBC99EA6EF5A5
   InstallerSwitches:
     Custom: /CurrentUser
 - Architecture: x64
   Scope: machine
-  InstallerUrl: https://cdn.kde.org/ci-builds/multimedia/kasts/release-26.04/windows/kasts-release_26.04-4430-windows-cl-msvc2022-x86_64.exe
-  InstallerSha256: 7DF35D277885723C1D35DB31F39CC7F6314CF82332E1A432C127769D58D9DE1A
+  InstallerUrl: https://cdn.kde.org/ci-builds/multimedia/kasts/release-26.04/windows/kasts-release_26.04-4480-windows-cl-msvc2022-x86_64.exe
+  InstallerSha256: DE0EDFB119A04F3BFFA4ACB24AA72F10D8FBD308DA35EBE3C0BDBC99EA6EF5A5
   InstallerSwitches:
     Custom: /AllUsers
 ManifestType: installer

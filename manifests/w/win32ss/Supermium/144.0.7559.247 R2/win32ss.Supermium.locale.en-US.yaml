@@ -12,7 +12,6 @@ Author: Shane Fournier
 PackageName: Supermium
 PackageUrl: https://win32subsystem.live/supermium/
 License: BSD-3-Clause
-LicenseUrl: https://github.com/win32ss/supermium/blob/HEAD/LICENSE
 Copyright: Copyright 2026 The Supermium Authors. All rights reserved.
 ShortDescription: Chromium fork for Windows XP/2003 and up.
 Description: |-
@@ -48,12 +47,10 @@ Tags:
 - web
 - webpage
 ReleaseNotes: |-
-  The following improvements have been implemented in this version of Supermium 144:
-  - Upstream security patches
-  - (#1832) Screen sharing issues fixed across several Windows versions
-  - (#1814, #1827 and others) Mitigation for Windows XP initialization issues by using --disable-gpu-rasterization. This can be reverted by using --enable-gpu-rasterization
-  - CMD shortcuts added for portable mode, which can be easily combined with either legacy UI modes or ungoogled-supermium mode. They are named "Supermium (Portable).cmd", "Supermium (Portable Classic).cmd", and on...
-  The user data profile will be written to the same directory as the Supermium executable using these shortcuts and the profiles will be unencrypted so they can be moved to other disk volumes.
+  This release of Supermium primarily fixes:
+  - the issue with displaying PDF documents on Windows Vista and 7 (#2073, #2072, #2058)
+  - a small fix for some systems being unable to set Supermium as default application for various protocols/file types (#2063)
+  However, a solution for occcasional process failures on some Windows XP systems is still being worked on.
 ReleaseNotesUrl: https://win32subsystem.live/supermium/history/
 Documentations:
 - DocumentLabel: FAQ

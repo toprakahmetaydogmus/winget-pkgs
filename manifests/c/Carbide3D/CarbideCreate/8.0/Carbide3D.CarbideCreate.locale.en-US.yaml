@@ -24,9 +24,8 @@ Tags:
 - cad
 - cam
 ReleaseNotes: |-
-  - (FIX) Changed the bounds calculation in Nesting to overflow the job area reather than leave parts unplaced.
-  - (FIX) Nesting now considers the starting orientation to make sure that the nested option will never be worse.
-  - (FIX) Rest machining failed when the pocket areas were barely larger than the first cutter.
+  - (FIX) Made "Create Outline" work for plane and cylinder components.
+  - (FIX) After indexing the library, its progress window could come back a few seconds later, stuck at 75-90%, and block the library window until Esc was pressed.
 ReleaseNotesUrl: https://carbide3d.com/carbidecreate/download/
 ManifestType: defaultLocale
 ManifestVersion: 1.12.0

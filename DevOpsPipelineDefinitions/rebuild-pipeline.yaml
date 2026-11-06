@@ -11,6 +11,7 @@ variables:
   Rebuild.SkipPausePublishPipeline: $[coalesce(variables.SkipPausePublishPipeline, 'False')]
   Rebuild.EnableContainerBackup: $[coalesce(variables.EnableContainerBackup, 'False')]
   Rebuild.ClearContainer: $[coalesce(variables.ClearContainer, 'False')]
+  Rebuild.AllowPartialRebuild: $[coalesce(variables.AllowPartialRebuild, 'False')]
 
 resources:
   repositories:
@@ -34,6 +35,10 @@ extends:
       # Agent phase.
       - job: 'Rebuild'
         displayName: 'Start Rebuild'
+        pool:
+          name: Azure-Pipelines-1ESPT-ExDShared-StaticIP
+          image: windows-2022
+          os: windows
         variables:
           skipComponentGovernanceDetection: ${{ true }}
           runCodesignValidationInjection: ${{ false }}
@@ -50,61 +55,25 @@ extends:
           fetchDepth: 1
           fetchTags: false
 
-        # Roll back agent to 2.76, see issue https://github.com/Azure/azure-cli/issues/32088#issuecomment-3283886207
-        # NOTE: Remove the next 3 steps once issue is fixed.
-        - powershell: |
-            Start-Process msiexec -ArgumentList ' /x {37CCEB8D-306A-4DB4-B25B-7608A093D184} /qn' -NoNewWindow -Wait
-          displayName: "Uninstall Azure CLI"
+        # Downloads dependencies and publishes the pipeline secrets.
+        - template: /DevOpsPipelineDefinitions/templates/winget-setup.yaml@self
+          parameters:
+            type: Rebuild
 
-        - powershell: |
-            Invoke-WebRequest -Uri "https://azurecliprod.blob.core.windows.net/msi/azure-cli-2.76.0-x64.msi" -OutFile "azure-cli-2.76.0.msi"
-            Start-Process msiexec -ArgumentList '/i "azure-cli-2.76.0.msi" /quiet /norestart' -NoNewWindow -Wait
-          displayName: "Install Azure CLI 2.76.0"
-          workingDirectory: $(Agent.TempDirectory)
-
-        - script: |
-            az version
-          displayName: "Check Azure CLI version"
-
-        # Downloads all the setup files and its dependencies.
+        # Keep the split tasks in this job: merge and index consume prepare's local workspace.
         - task: AzureCLI@2
-          displayName: 'Azure Setup'
+          displayName: 'Prepare Repository'
           inputs:
             azureSubscription: '$(WinGetSvc.DataAccess)'
             scriptType: batch
             scriptLocation: inlineScript
             inlineScript: |
-              az storage blob download-batch --auth-mode login -d . --pattern * -s servicewrapper --output none --account-name $(ValidationStorageAccountName)
-            addSpnToEnvironment: true
-
-        # WinGet setup
-        - task: CmdLine@2
-          name: 'wingetsetup'
-          displayName: 'WinGet Setup'
-          env:
-            HOST_KEY: $(AzureFunctionHostKey)
-            SIGN_ENDPOINT: $(AzFuncSignEndpoint)
-            PUBLISH_ENDPOINT: $(AzFuncRebuildPublishEndpoint)
-            CLEANUP_ENDPOINT: $(AzFuncRebuildCleanupEndpoint)
-            RESTSOURCE_REBUILD_ENDPOINT: $(AzFuncRestSourceRebuildEndpoint)
-          inputs:
-            script: 'winget_rebuild_setup.cmd'
-            workingDirectory: scripts
-
-        - task: AzureCLI@2
-          displayName: 'Validate Manifests'
-          inputs:
-            azureSubscription: '$(WinGetSvc.DataAccess)'
-            scriptType: batch
-            scriptLocation: inlineScript
-            inlineScript: |
-              WinGetSvcWrapper.exe rebuild --operationId %BUILD_BUILDNUMBER%
+              WinGetSvcWrapper.exe rebuild-prepare --operationId %BUILD_BUILDNUMBER%
             addSpnToEnvironment: true
             failOnStandardError: true
           env:
             ValidationStorageAccountName: $(ValidationStorageAccountName)
             CacheStorageAccountName: $(CacheStorageAccountName)
-            StorageManagedIdentityClientId: $(StorageManagedIdentityClientId)
             WinGet:AppConfig:PrimaryEndpoint: $(AppConfigPrimaryEndpoint)
             WinGet:AppConfig:SecondaryEndpoint: $(AppConfigSecondaryEndpoint)
             DIApplicationInsightKey: $(DIApplicationInsightKey)
@@ -112,6 +81,51 @@ extends:
             SYSTEM_ACCESSTOKEN: $(System.AccessToken)
             ExecutionEnvironment: $(WinGetSvc.ExecutionEnvironment)
             SkipPausePublishPipeline: $(Rebuild.SkipPausePublishPipeline)
+            AllowPartialRebuild: $(Rebuild.AllowPartialRebuild)
+
+        - task: AzureCLI@2
+          displayName: 'Create Merged Manifests'
+          inputs:
+            azureSubscription: '$(WinGetSvc.DataAccess)'
+            scriptType: batch
+            scriptLocation: inlineScript
+            inlineScript: |
+              WinGetSvcWrapper.exe rebuild-merge --operationId %BUILD_BUILDNUMBER%
+            addSpnToEnvironment: true
+            failOnStandardError: true
+          env:
+            ValidationStorageAccountName: $(ValidationStorageAccountName)
+            CacheStorageAccountName: $(CacheStorageAccountName)
+            WinGet:AppConfig:PrimaryEndpoint: $(AppConfigPrimaryEndpoint)
+            WinGet:AppConfig:SecondaryEndpoint: $(AppConfigSecondaryEndpoint)
+            DIApplicationInsightKey: $(DIApplicationInsightKey)
+            PackagePublisher: $(PackagePublisher)
+            SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+            ExecutionEnvironment: $(WinGetSvc.ExecutionEnvironment)
+            SkipPausePublishPipeline: $(Rebuild.SkipPausePublishPipeline)
+            AllowPartialRebuild: $(Rebuild.AllowPartialRebuild)
+
+        - task: AzureCLI@2
+          displayName: 'Index Repository'
+          inputs:
+            azureSubscription: '$(WinGetSvc.DataAccess)'
+            scriptType: batch
+            scriptLocation: inlineScript
+            inlineScript: |
+              WinGetSvcWrapper.exe rebuild-index --operationId %BUILD_BUILDNUMBER%
+            addSpnToEnvironment: true
+            failOnStandardError: true
+          env:
+            ValidationStorageAccountName: $(ValidationStorageAccountName)
+            CacheStorageAccountName: $(CacheStorageAccountName)
+            WinGet:AppConfig:PrimaryEndpoint: $(AppConfigPrimaryEndpoint)
+            WinGet:AppConfig:SecondaryEndpoint: $(AppConfigSecondaryEndpoint)
+            DIApplicationInsightKey: $(DIApplicationInsightKey)
+            PackagePublisher: $(PackagePublisher)
+            SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+            ExecutionEnvironment: $(WinGetSvc.ExecutionEnvironment)
+            SkipPausePublishPipeline: $(Rebuild.SkipPausePublishPipeline)
+            AllowPartialRebuild: $(Rebuild.AllowPartialRebuild)
 
       # Agentless phase. Depends on previous job. 
       - job: 'SignPackage'
@@ -176,8 +190,6 @@ extends:
               "repository": "$(build.repository.id)",
               "pipelineType": "RebuildPipeline",
               "containerName": "$(CacheContainerName)",
-              "commitTablePartitionKey": "$(CommitTablePartitionKey)",
-              "commitTableRowKey": "$(CommitTableRowKey)",
               "enableContainerBackup": "$(Rebuild.EnableContainerBackup)",
               "skipManifestIndexUpdate": "$(Rebuild.SkipManifestIndexUpdate)",
               "clearContainer": "$(Rebuild.ClearContainer)",
@@ -216,5 +228,6 @@ extends:
               "taskInstanceId": "$(system.TaskInstanceId)",
               "repository": "$(build.repository.id)",
               "pipelineType": "RebuildPipeline",
+              "containerName": "$(CacheContainerName)",
               }
             waitForCompletion: "true"
